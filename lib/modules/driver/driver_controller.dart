@@ -1,0 +1,3 @@
+class DriverController {
+  const DriverController();
+}

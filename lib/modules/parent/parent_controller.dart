@@ -1,0 +1,3 @@
+class ParentController {
+  const ParentController();
+}

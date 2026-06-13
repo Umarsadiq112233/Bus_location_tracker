@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CLIENT_ID</key>
+	<string>883729268140-eucrbr75u80vt34bqkn39vcq2dpr4hcu.apps.googleusercontent.com</string>
+	<key>REVERSED_CLIENT_ID</key>
+	<string>com.googleusercontent.apps.883729268140-eucrbr75u80vt34bqkn39vcq2dpr4hcu</string>
+	<key>API_KEY</key>
+	<string>AIzaSyCT-IOXeUDGNd5nPrQK8PDmu1UvS7h1VS4</string>
+	<key>GCM_SENDER_ID</key>
+	<string>883729268140</string>
+	<key>PLIST_VERSION</key>
+	<string>1</string>
+	<key>BUNDLE_ID</key>
+	<string>com.example.busLocationTracker</string>
+	<key>PROJECT_ID</key>
+	<string>bus-location-tracker-b309f</string>
+	<key>STORAGE_BUCKET</key>
+	<string>bus-location-tracker-b309f.firebasestorage.app</string>
+	<key>IS_ADS_ENABLED</key>
+	<false></false>
+	<key>IS_ANALYTICS_ENABLED</key>
+	<false></false>
+	<key>IS_APPINVITE_ENABLED</key>
+	<true></true>
+	<key>IS_GCM_ENABLED</key>
+	<true></true>
+	<key>IS_SIGNIN_ENABLED</key>
+	<true></true>
+	<key>GOOGLE_APP_ID</key>
+	<string>1:883729268140:ios:79f99870b4ae968765ce09</string>
+</dict>
+</plist>

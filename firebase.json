@@ -1,0 +1,33 @@
+{
+  "firestore": {
+    "rules": "firestore.rules"
+  },
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "bus-location-tracker-b309f",
+          "appId": "1:883729268140:android:e0b7672b28ef6c6365ce09",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "ios": {
+        "default": {
+          "projectId": "bus-location-tracker-b309f",
+          "appId": "1:883729268140:ios:79f99870b4ae968765ce09",
+          "uploadDebugSymbols": false,
+          "fileOutput": "ios/Runner/GoogleService-Info.plist"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "bus-location-tracker-b309f",
+          "configurations": {
+            "android": "1:883729268140:android:e0b7672b28ef6c6365ce09",
+            "ios": "1:883729268140:ios:79f99870b4ae968765ce09"
+          }
+        }
+      }
+    }
+  }
+}
