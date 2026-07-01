@@ -2,11 +2,14 @@ import '../../core/widgets/app_screen.dart';
 import '../../core/services/student_service.dart';
 import '../../core/services/parent_service.dart';
 import '../../core/services/assignment_service.dart';
+import '../../core/services/school_service.dart';
 import '../../core/models/user_model.dart';
 import '../../core/models/bus_model.dart';
+import '../../core/providers/admin_provider.dart';
 import '../../core/utils/snackbar_utils.dart';
 import '../../app/theme/app_colors.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 class AddEditStudentScreen extends StatefulWidget {
   const AddEditStudentScreen({super.key});
@@ -31,6 +34,7 @@ class _AddEditStudentScreenState extends State<AddEditStudentScreen> {
   String? _selectedBusId;
   String? _selectedParentUid;
   String? _studentId;
+  String? _schoolId;
   bool _isInit = false;
 
   List<BusModel> _buses = [];
@@ -65,6 +69,17 @@ class _AddEditStudentScreenState extends State<AddEditStudentScreen> {
 
         final parentUid = args['parentUid'];
         if (parentUid != null && parentUid.toString().isNotEmpty) _selectedParentUid = parentUid;
+
+        // Pick up schoolId from args (passed when SchoolAdmin creates a new student)
+        final argSchoolId = args['schoolId'];
+        if (argSchoolId != null && argSchoolId.toString().isNotEmpty) {
+          _schoolId = argSchoolId;
+        }
+      }
+      // If schoolId not set via args, try from provider (for SchoolAdmin)
+      final provider = context.read<AdminProvider>();
+      if (_schoolId == null && provider.isSchoolAdmin && provider.schoolId != null) {
+        _schoolId = provider.schoolId;
       }
       _isInit = true;
     }
@@ -82,7 +97,16 @@ class _AddEditStudentScreenState extends State<AddEditStudentScreen> {
 
   Future<void> _loadData() async {
     try {
-      final buses = await _assignmentService.fetchBuses();
+      final provider = context.read<AdminProvider>();
+      List<BusModel> buses;
+
+      // SchoolAdmin: only show buses assigned to their school
+      if (provider.isSchoolAdmin && _schoolId != null) {
+        buses = await SchoolService().fetchBusesForSchool(_schoolId!);
+      } else {
+        buses = await _assignmentService.fetchBuses();
+      }
+
       final parents = await _parentService.fetchAllParents();
 
       if (mounted) {
@@ -131,6 +155,7 @@ class _AddEditStudentScreenState extends State<AddEditStudentScreen> {
         assignedBusId: _selectedBusId,
         status: _status,
         parentUid: _selectedParentUid,
+        schoolId: _schoolId,
       );
 
       if (!mounted) return;

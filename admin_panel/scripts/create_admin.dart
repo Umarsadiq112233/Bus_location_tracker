@@ -55,15 +55,48 @@ void main() async {
     final authBody = await authResponse.transform(utf8.decoder).join();
     final authJson = jsonDecode(authBody) as Map<String, dynamic>;
 
-    if (authResponse.statusCode != 200) {
-      final errorMsg = authJson['error']?['message'] ?? 'Unknown authentication error';
-      print('Firebase Auth Error: $errorMsg');
-      exit(1);
-    }
+    String uid;
+    String idToken;
 
-    final uid = authJson['localId'] as String;
-    final idToken = authJson['idToken'] as String;
-    print('User created successfully in Auth (UID: $uid).');
+    if (authResponse.statusCode == 200) {
+      uid = authJson['localId'] as String;
+      idToken = authJson['idToken'] as String;
+      print('User created successfully in Auth (UID: $uid).');
+    } else {
+      final errorMsg = authJson['error']?['message'] ?? 'Unknown authentication error';
+      if (errorMsg == 'EMAIL_EXISTS') {
+        print('Email already exists in Firebase Auth. Signing in to fetch UID and update/create Firestore profile...');
+        final signInUrl = Uri.parse(
+          'https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=$apiKey',
+        );
+        final signInRequest = await client.postUrl(signInUrl);
+        signInRequest.headers.contentType = ContentType.json;
+        signInRequest.write(
+          jsonEncode({
+            'email': email,
+            'password': password,
+            'returnSecureToken': true,
+          }),
+        );
+        final signInResponse = await signInRequest.close();
+        final signInBody = await signInResponse.transform(utf8.decoder).join();
+        final signInJson = jsonDecode(signInBody) as Map<String, dynamic>;
+
+        if (signInResponse.statusCode == 200) {
+          uid = signInJson['localId'] as String;
+          idToken = signInJson['idToken'] as String;
+          print('Sign-in successful! (UID: $uid)');
+        } else {
+          final signInErrorMsg = signInJson['error']?['message'] ?? 'Unknown sign-in error';
+          print('Firebase Auth Sign-In Error: $signInErrorMsg');
+          print('Please make sure you entered the correct password for the existing user.');
+          exit(1);
+        }
+      } else {
+        print('Firebase Auth Error: $errorMsg');
+        exit(1);
+      }
+    }
 
     print('Seeding admin role into Firestore...');
     final firestoreUrl = Uri.parse(

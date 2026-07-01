@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:provider/provider.dart';
 import '../../core/models/bus_model.dart';
 import '../../core/services/assignment_service.dart';
+import '../../core/providers/admin_provider.dart';
 import 'management_screen.dart';
 
 class ManageStudentsParentsScreen extends StatefulWidget {
@@ -174,9 +176,23 @@ class _ManageStudentsParentsScreenState extends State<ManageStudentsParentsScree
     }
 
     final scheme = Theme.of(context).colorScheme;
+    final provider = context.watch<AdminProvider>();
+    final isSchoolAdmin = provider.isSchoolAdmin;
+    final schoolId = provider.schoolId;
+
+    // Use school-scoped query for SchoolAdmin
+    Stream<QuerySnapshot> usersStream;
+    if (isSchoolAdmin && schoolId != null) {
+      usersStream = FirebaseFirestore.instance
+          .collection('users')
+          .where('schoolId', isEqualTo: schoolId)
+          .snapshots();
+    } else {
+      usersStream = FirebaseFirestore.instance.collection('users').snapshots();
+    }
 
     return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance.collection('users').snapshots(),
+      stream: usersStream,
       builder: (context, snapshot) {
         if (snapshot.hasError) {
           debugPrint('Firestore query error: ${snapshot.error}');
@@ -236,7 +252,13 @@ class _ManageStudentsParentsScreenState extends State<ManageStudentsParentsScree
                     subtitle: 'Track school students and assign them specific bus lines.',
                     searchLabel: 'Search student',
                     actionLabel: 'Add Student',
-                    onAction: () => Navigator.pushNamed(context, '/add-edit-student'),
+                    onAction: () => Navigator.pushNamed(
+                      context,
+                      '/add-edit-student',
+                      arguments: isSchoolAdmin && schoolId != null
+                          ? {'schoolId': schoolId}
+                          : null,
+                    ),
                     items: items,
                     icon: Icons.school_rounded,
                     onItemTap: (index) {
@@ -304,7 +326,13 @@ class _ManageStudentsParentsScreenState extends State<ManageStudentsParentsScree
                     subtitle: 'Register new parents and associate children to them.',
                     searchLabel: 'Search parent',
                     actionLabel: 'Add Parent',
-                    onAction: () => Navigator.pushNamed(context, '/add-edit-parent'),
+                    onAction: () => Navigator.pushNamed(
+                      context,
+                      '/add-edit-parent',
+                      arguments: isSchoolAdmin && schoolId != null
+                          ? {'schoolId': schoolId}
+                          : null,
+                    ),
                     items: items,
                     icon: Icons.family_restroom_rounded,
                     onItemTap: (index) {

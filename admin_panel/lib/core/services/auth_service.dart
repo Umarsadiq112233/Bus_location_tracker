@@ -41,7 +41,7 @@ class AuthService {
           .collection('users')
           .doc(uid)
           .get();
-      if (doc.exists) {
+      if (doc.exists && doc.data() != null) {
         return UserModel.fromMap(doc.data() as Map<String, dynamic>, doc.id);
       }
       return null;

@@ -3,6 +3,8 @@ import '../../app/theme/app_colors.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
+import 'package:provider/provider.dart';
+import '../../core/providers/admin_provider.dart';
 
 class ReportsScreen extends StatefulWidget {
   const ReportsScreen({super.key});
@@ -14,10 +16,12 @@ class ReportsScreen extends StatefulWidget {
 class _ReportsScreenState extends State<ReportsScreen> {
   int _selectedTab = 0; // 0: Trips Count, 1: Delays
   bool _animate = false;
+  List<String>? _schoolBusIds;
 
   @override
   void initState() {
     super.initState();
+    _loadSchoolBusIds();
     Future.delayed(const Duration(milliseconds: 100), () {
       if (mounted) {
         setState(() {
@@ -25,6 +29,34 @@ class _ReportsScreenState extends State<ReportsScreen> {
         });
       }
     });
+  }
+
+  Future<void> _loadSchoolBusIds() async {
+    final provider = context.read<AdminProvider>();
+    if (provider.isSchoolAdmin && provider.schoolId != null) {
+      try {
+        final doc = await FirebaseFirestore.instance
+            .collection('schools')
+            .doc(provider.schoolId)
+            .get();
+        if (doc.exists && mounted) {
+          setState(() {
+            _schoolBusIds = List<String>.from(doc.data()?['assignedBusIds'] ?? []);
+          });
+        } else if (mounted) {
+          setState(() {
+            _schoolBusIds = [];
+          });
+        }
+      } catch (e) {
+        debugPrint('Failed to load school bus IDs: $e');
+        if (mounted) {
+          setState(() {
+            _schoolBusIds = [];
+          });
+        }
+      }
+    }
   }
 
   @override
@@ -47,6 +79,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
     }
     final dateRangeStr = '${formatDate(startOfWeek)} - ${formatDate(endOfWeek)}, ${now.year}';
 
+    final provider = context.read<AdminProvider>();
+
     return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
       stream: FirebaseFirestore.instance.collection('users').where('role', isEqualTo: 'student').snapshots(),
       builder: (context, studentSnapshot) {
@@ -68,13 +102,35 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   );
                 }
 
-                final totalStudents = studentSnapshot.data?.docs.length ?? 0;
-                final activeBusesCount = busSnapshot.data?.docs.where((doc) {
+                if (provider.isSchoolAdmin && _schoolBusIds == null) {
+                  return const AppScreen(
+                    title: 'System Reports',
+                    subtitle: 'Loading school configuration...',
+                    children: [
+                      Center(child: CircularProgressIndicator()),
+                    ],
+                  );
+                }
+
+                final allStudents = studentSnapshot.data?.docs ?? [];
+                final students = provider.isSchoolAdmin
+                    ? allStudents.where((doc) => doc.data()['schoolId'] == provider.schoolId).toList()
+                    : allStudents;
+                final totalStudents = students.length;
+
+                final allBusesDocs = busSnapshot.data?.docs ?? [];
+                final schoolBusesDocs = provider.isSchoolAdmin
+                    ? allBusesDocs.where((doc) => _schoolBusIds!.contains(doc.id)).toList()
+                    : allBusesDocs;
+                final activeBusesCount = schoolBusesDocs.where((doc) {
                   final data = doc.data();
                   return data['status'] == 'active';
-                }).length ?? 0;
+                }).length;
 
-                final docs = snapshot.data?.docs ?? [];
+                final allTripsDocs = snapshot.data?.docs ?? [];
+                final docs = provider.isSchoolAdmin
+                    ? allTripsDocs.where((doc) => _schoolBusIds!.contains(doc.data()['busId'] ?? '')).toList()
+                    : allTripsDocs.toList();
                 final totalTrips = docs.length;
 
         int completed = 0;

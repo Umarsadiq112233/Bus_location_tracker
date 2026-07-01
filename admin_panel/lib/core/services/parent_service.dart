@@ -16,6 +16,18 @@ class ParentService {
             .toList());
   }
 
+  // Stream of parents filtered by school
+  Stream<List<UserModel>> getParentsStreamBySchool(String schoolId) {
+    return _firestore
+        .collection('users')
+        .where('role', isEqualTo: UserRole.parent.name)
+        .where('schoolId', isEqualTo: schoolId)
+        .snapshots()
+        .map((snapshot) => snapshot.docs
+            .map((doc) => UserModel.fromMap(doc.data(), doc.id))
+            .toList());
+  }
+
   // Fetch all parents (Future)
   Future<List<UserModel>> fetchAllParents() async {
     final snapshot = await _firestore
@@ -35,6 +47,7 @@ class ParentService {
     required String phone,
     required String status,
     required List<String> childrenUids,
+    String? schoolId,
   }) async {
     final data = {
       'name': name,
@@ -43,6 +56,7 @@ class ParentService {
       'status': status,
       'role': UserRole.parent.name,
       'childrenUids': childrenUids,
+      if (schoolId != null) 'schoolId': schoolId,
     };
 
     if (id != null && id.isNotEmpty) {

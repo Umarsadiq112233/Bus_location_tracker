@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:provider/provider.dart';
 import '../../app/theme/app_colors.dart';
+import '../../core/providers/admin_provider.dart';
 
 class EmergencyAlertsScreen extends StatefulWidget {
   const EmergencyAlertsScreen({super.key});
@@ -13,11 +15,34 @@ class EmergencyAlertsScreen extends StatefulWidget {
 class _EmergencyAlertsScreenState extends State<EmergencyAlertsScreen>
     with SingleTickerProviderStateMixin {
   late final TabController _tabController;
+  List<String>? _schoolBusIds;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _loadSchoolBusIds();
+  }
+
+  Future<void> _loadSchoolBusIds() async {
+    final provider = context.read<AdminProvider>();
+    if (provider.isSchoolAdmin && provider.schoolId != null) {
+      try {
+        final doc = await FirebaseFirestore.instance
+            .collection('schools')
+            .doc(provider.schoolId)
+            .get();
+        if (doc.exists && mounted) {
+          setState(() {
+            _schoolBusIds = List<String>.from(
+              doc.data()?['assignedBusIds'] ?? [],
+            );
+          });
+        }
+      } catch (e) {
+        debugPrint('Failed to load school bus IDs: $e');
+      }
+    }
   }
 
   @override
@@ -171,7 +196,17 @@ class _EmergencyAlertsScreenState extends State<EmergencyAlertsScreen>
           return const Center(child: CircularProgressIndicator());
         }
 
-        final docs = snapshot.data?.docs ?? [];
+        final allDocs = snapshot.data?.docs ?? [];
+
+        // SchoolAdmin: filter to only show alerts for school-assigned buses
+        final docs = _schoolBusIds != null
+            ? allDocs.where((doc) {
+                final data = doc.data() as Map<String, dynamic>;
+                final busId = data['busId'] ?? '';
+                return _schoolBusIds!.contains(busId);
+              }).toList()
+            : allDocs;
+
         if (docs.isEmpty) {
           return Center(
             child: Column(

@@ -16,6 +16,18 @@ class StudentService {
             .toList());
   }
 
+  // Stream of students filtered by school
+  Stream<List<UserModel>> getStudentsStreamBySchool(String schoolId) {
+    return _firestore
+        .collection('users')
+        .where('role', isEqualTo: UserRole.student.name)
+        .where('schoolId', isEqualTo: schoolId)
+        .snapshots()
+        .map((snapshot) => snapshot.docs
+            .map((doc) => UserModel.fromMap(doc.data(), doc.id))
+            .toList());
+  }
+
   // Fetch all students (Future)
   Future<List<UserModel>> fetchAllStudents() async {
     final snapshot = await _firestore
@@ -38,6 +50,7 @@ class StudentService {
     String? assignedBusId,
     String? status,
     String? parentUid, // UID of the selected parent
+    String? schoolId,
   }) async {
     final Map<String, dynamic> data = {
       'name': name,
@@ -48,6 +61,7 @@ class StudentService {
       'assignedBusId': assignedBusId ?? '',
       'status': status ?? 'active',
       'role': UserRole.student.name,
+      if (schoolId != null) 'schoolId': schoolId,
     };
 
     String studentId;

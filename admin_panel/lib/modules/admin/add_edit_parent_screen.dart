@@ -2,9 +2,11 @@ import '../../core/widgets/app_screen.dart';
 import '../../core/services/parent_service.dart';
 import '../../core/services/student_service.dart';
 import '../../core/models/user_model.dart';
+import '../../core/providers/admin_provider.dart';
 import '../../core/utils/snackbar_utils.dart';
 import '../../app/theme/app_colors.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 class AddEditParentScreen extends StatefulWidget {
   const AddEditParentScreen({super.key});
@@ -24,6 +26,7 @@ class _AddEditParentScreenState extends State<AddEditParentScreen> {
 
   String _status = 'active';
   String? _parentId;
+  String? _schoolId;
   bool _isInit = false;
 
   List<UserModel> _allStudents = [];
@@ -57,6 +60,17 @@ class _AddEditParentScreenState extends State<AddEditParentScreen> {
         if (children != null) {
           _selectedChildrenUids.addAll(List<String>.from(children));
         }
+
+        // Pick up schoolId from args
+        final argSchoolId = args['schoolId'];
+        if (argSchoolId != null && argSchoolId.toString().isNotEmpty) {
+          _schoolId = argSchoolId;
+        }
+      }
+      // If schoolId not set via args, try from provider
+      final provider = context.read<AdminProvider>();
+      if (_schoolId == null && provider.isSchoolAdmin && provider.schoolId != null) {
+        _schoolId = provider.schoolId;
       }
       _isInit = true;
     }
@@ -72,7 +86,16 @@ class _AddEditParentScreenState extends State<AddEditParentScreen> {
 
   Future<void> _loadData() async {
     try {
-      final students = await _studentService.fetchAllStudents();
+      List<UserModel> students;
+      final provider = context.read<AdminProvider>();
+
+      // SchoolAdmin: only show students from their school
+      if (provider.isSchoolAdmin && _schoolId != null) {
+        students = await _studentService.fetchAllStudents();
+        students = students.where((s) => s.schoolId == _schoolId).toList();
+      } else {
+        students = await _studentService.fetchAllStudents();
+      }
       if (mounted) {
         setState(() {
           _allStudents = students;
@@ -100,6 +123,7 @@ class _AddEditParentScreenState extends State<AddEditParentScreen> {
         phone: _phoneCtrl.text.trim(),
         status: _status,
         childrenUids: _selectedChildrenUids,
+        schoolId: _schoolId,
       );
 
       if (!mounted) return;

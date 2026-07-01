@@ -1,1 +1,1 @@
-enum UserRole { parent, student, driver, admin }
+enum UserRole { parent, student, driver, admin, proAdmin, schoolAdmin }

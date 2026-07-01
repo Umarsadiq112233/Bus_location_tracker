@@ -1,8 +1,10 @@
 import '../../app/theme/app_colors.dart';
 import '../../core/services/auth_service.dart';
 import '../../core/utils/snackbar_utils.dart';
+import '../../core/providers/admin_provider.dart';
 import '../../shared/enums/user_role.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -46,8 +48,25 @@ class _LoginScreenState extends State<LoginScreen> {
       );
 
       if (userModel != null) {
-        if (userModel.role == UserRole.admin) {
+        // Accept admin, proAdmin, and schoolAdmin roles
+        if (userModel.role == UserRole.admin ||
+            userModel.role == UserRole.proAdmin ||
+            userModel.role == UserRole.schoolAdmin) {
           if (!mounted) return;
+
+          // Store admin data in provider
+          final provider = context.read<AdminProvider>();
+          provider.setAdmin(userModel);
+
+          // Store credentials for re-auth (used when creating SchoolAdmin accounts)
+          if (userModel.role == UserRole.admin ||
+              userModel.role == UserRole.proAdmin) {
+            provider.storeProAdminCredentials(
+              _emailController.text.trim(),
+              _passwordController.text,
+            );
+          }
+
           Navigator.pushReplacementNamed(context, '/dashboard');
         } else {
           // Access Denied: not an admin. Sign out immediately.
@@ -93,19 +112,22 @@ class _LoginScreenState extends State<LoginScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'Email Address',
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w700,
-                color: AppColors.textPrimary,
+                color: isDark ? Colors.white70 : AppColors.textPrimary,
               ),
             ),
             const SizedBox(height: 8),
             TextFormField(
               controller: _emailController,
               keyboardType: TextInputType.emailAddress,
-              style: const TextStyle(fontWeight: FontWeight.w600),
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                color: isDark ? Colors.black87 : AppColors.textPrimary,
+              ),
               validator: (value) {
                 if (value == null || value.isEmpty) {
                   return 'Email is required';
@@ -117,6 +139,9 @@ class _LoginScreenState extends State<LoginScreen> {
               },
               decoration: InputDecoration(
                 hintText: 'enter admin email',
+                hintStyle: TextStyle(
+                  color: isDark ? Colors.black38 : AppColors.textMuted,
+                ),
                 prefixIcon: const Icon(Icons.mail_outline_rounded, color: Color(0xFF512DA8)),
                 filled: true,
                 fillColor: AppColors.surfaceSoft,
@@ -127,19 +152,22 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
             ),
             const SizedBox(height: 20),
-            const Text(
+            Text(
               'Password',
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w700,
-                color: AppColors.textPrimary,
+                color: isDark ? Colors.white70 : AppColors.textPrimary,
               ),
             ),
             const SizedBox(height: 8),
             TextFormField(
               controller: _passwordController,
               obscureText: _obscurePassword,
-              style: const TextStyle(fontWeight: FontWeight.w600),
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                color: isDark ? Colors.black87 : AppColors.textPrimary,
+              ),
               validator: (value) {
                 if (value == null || value.isEmpty) {
                   return 'Password is required';
@@ -151,6 +179,9 @@ class _LoginScreenState extends State<LoginScreen> {
               },
               decoration: InputDecoration(
                 hintText: 'enter password',
+                hintStyle: TextStyle(
+                  color: isDark ? Colors.black38 : AppColors.textMuted,
+                ),
                 prefixIcon: const Icon(Icons.lock_outline_rounded, color: Color(0xFF512DA8)),
                 suffixIcon: IconButton(
                   onPressed: () => setState(
@@ -160,7 +191,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     _obscurePassword
                         ? Icons.visibility_off_rounded
                         : Icons.visibility_rounded,
-                    color: AppColors.textMuted,
+                    color: isDark ? Colors.black54 : AppColors.textMuted,
                   ),
                 ),
                 filled: true,

@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:provider/provider.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../../core/models/route_model.dart';
+import '../../core/providers/admin_provider.dart';
 import '../../core/widgets/app_screen.dart';
 
 class AdminLiveTrackingScreen extends StatefulWidget {
@@ -26,11 +28,42 @@ class _AdminLiveTrackingScreenState extends State<AdminLiveTrackingScreen> {
   bool _isInit = false;
   Map<String, RouteModel> _routesMap = {};
   final Map<String, List<LatLng>> _roadRoutesCache = {};
+  List<String>? _schoolBusIds; // Only set for SchoolAdmin
 
   @override
   void initState() {
     super.initState();
     _loadRoutes();
+    _loadSchoolBusIds();
+  }
+
+  Future<void> _loadSchoolBusIds() async {
+    // Only needed for SchoolAdmin
+    final provider = context.read<AdminProvider>();
+    if (provider.isSchoolAdmin && provider.schoolId != null) {
+      try {
+        final doc = await FirebaseFirestore.instance
+            .collection('schools')
+            .doc(provider.schoolId)
+            .get();
+        if (doc.exists && mounted) {
+          setState(() {
+            _schoolBusIds = List<String>.from(doc.data()?['assignedBusIds'] ?? []);
+          });
+        } else if (mounted) {
+          setState(() {
+            _schoolBusIds = [];
+          });
+        }
+      } catch (e) {
+        debugPrint('Failed to load school bus IDs: $e');
+        if (mounted) {
+          setState(() {
+            _schoolBusIds = [];
+          });
+        }
+      }
+    }
   }
 
   Future<void> _loadRoutes() async {
@@ -114,6 +147,7 @@ class _AdminLiveTrackingScreenState extends State<AdminLiveTrackingScreen> {
     final scheme = theme.colorScheme;
     final width = MediaQuery.of(context).size.width;
     final isWide = width >= 900;
+    final provider = context.read<AdminProvider>();
 
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance.collection('buses').snapshots(),
@@ -123,7 +157,26 @@ class _AdminLiveTrackingScreenState extends State<AdminLiveTrackingScreen> {
         }
 
         final docs = snapshot.data?.docs ?? [];
-        final allBuses = docs.toList();
+        var allBuses = docs.toList();
+
+        // SchoolAdmin: filter to only school-assigned buses
+        if (provider.isSchoolAdmin) {
+          if (_schoolBusIds == null) {
+            return AppScreen(
+              title: 'Admin Live Tracking',
+              subtitle: 'Monitor all active buses with real-time GPS locations.',
+              children: const [
+                SizedBox(
+                  height: 300,
+                  child: Center(
+                    child: CircularProgressIndicator(),
+                  ),
+                ),
+              ],
+            );
+          }
+          allBuses = allBuses.where((doc) => _schoolBusIds!.contains(doc.id)).toList();
+        }
 
         final activeBuses = allBuses.where((doc) {
           final data = doc.data() as Map<String, dynamic>;
